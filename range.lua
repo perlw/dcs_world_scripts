@@ -1,8 +1,8 @@
 do
 
-  trigger.action.outTextForCoalition(coalition.side.BLUE, "Booting Range Script", 1)
+  trigger.action.outText("Booting Range Script", 1)
 
-  local units = mist.makeUnitTable({'[blue][plane]'})
+  local units = mist.makeUnitTable({'[all][plane]'})
 
   -- Strafe Pits
   StrafePits = {
@@ -17,7 +17,7 @@ do
     },
   }
 
-  function strafePitsOnHit(event)
+  function eventHandler(event)
     if event.id == world.event.S_EVENT_HIT and event.weapon then
       if event.target == nil then
         return
@@ -49,7 +49,7 @@ do
     end
   end
 
-  mist.addEventHandler(strafePitsOnHit)
+  mist.addEventHandler(eventHandler)
 
   function beginStrafeRun(args)
     local pit = args.strafePit
@@ -61,8 +61,16 @@ do
     end
 
     if StrafePits[pit].active then
-      trigger.action.outTextForCoalition(coalition.side.BLUE, "This pit is already taken by " .. StrafePits[pit].playerName, 1)
+      trigger.action.outText("This pit is already taken by " .. StrafePits[pit].playerName, 1)
       return
+    end
+
+    local rounds= 0
+    local ammo = unit:getAmmo()
+    for t = 1, #ammo do
+      if ammo[t].desc.category == Weapon.Category.SHELL then
+        rounds = rounds + ammo[t].count
+      end
     end
 
     local playerName = unit:getPlayerName()
@@ -70,7 +78,8 @@ do
     StrafePits[pit].unitName = unitName
     StrafePits[pit].playerName = playerName
     StrafePits[pit].hitCount = 0
-    trigger.action.outTextForCoalition(coalition.side.BLUE, playerName  .. " has started a run on " .. pit, 1)
+    StrafePits[pit].startAmmo = rounds
+    trigger.action.outText(playerName  .. " has started a run on " .. pit, 1)
   end
 
   function endStrafeRun(args)
@@ -87,13 +96,23 @@ do
     end
 
     if StrafePits[pit].active and not (StrafePits[pit].unitName == unitName) then
-      trigger.action.outTextForCoalition(coalition.side.BLUE, "This pit is taken by " .. StrafePits[pit].playerName .. ", not you", 1)
+      trigger.action.outText("This pit is taken by " .. StrafePits[pit].playerName .. ", not you", 1)
       return
     end
 
+    local roundsLeft = 0
+    local ammo = unit:getAmmo()
+    for t = 1, #ammo do
+      if ammo[t].desc.category == Weapon.Category.SHELL then
+        roundsLeft = roundsLeft + ammo[t].count
+      end
+    end
+
+    local roundsUsed = StrafePits[pit].startAmmo - roundsLeft
+    local accuracy = math.floor(((StrafePits[pit].hitCount / roundsUsed) * 100) + 0.5)
     StrafePits[pit].active = false
-    trigger.action.outTextForCoalition(coalition.side.BLUE, StrafePits[pit].playerName  .. " has ended a run on pit 1", 1)
-    trigger.action.outTextForCoalition(coalition.side.BLUE, "Hit count: " .. tostring(StrafePits[pit].hitCount), 2)
+    trigger.action.outText(StrafePits[pit].playerName  .. " has ended a run on pit 1", 1)
+    trigger.action.outText("Hit count: " .. StrafePits[pit].hitCount .. "\nAccuracy: " .. StrafePits[pit].hitCount .. "/" .. roundsUsed .. " (" .. accuracy .. "%)", 2)
   end
 
   -- Radio Commands
@@ -113,7 +132,7 @@ do
     local gid = group:getID()
     local radioName = tostring(gid) .. ":" .. unitName
     if RadioCommandTable[radioName] == nil then
-      trigger.action.outTextForCoalition(coalition.side.BLUE, "Adding radio to " .. radioName, 1)
+      trigger.action.outText("Adding radio to " .. radioName, 1)
 
       local strafeSubMenu = missionCommands.addSubMenuForGroup(gid, "Strafe Pits", nil)
       missionCommands.addCommandForGroup(gid, "Begin run, Strafe Pit 1", strafeSubMenu, beginStrafeRun, { strafePit = "StrafePit1", unitName = unitName, })
