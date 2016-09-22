@@ -2,7 +2,7 @@ do
 
   trigger.action.outText("Booting Range Script", 1)
 
-  local units = mist.makeUnitTable({'[all][plane]'})
+  local units = mist.makeUnitTable({'[blue][plane]', '[blue][helicopter]'})
 
   -- Strafe Pits
   StrafePits = {
@@ -148,7 +148,9 @@ do
 
   function addRadioCommands(arg, time)
     for t = 1, #units do
-      addRadioCommand(units[t])
+      --if string.find(units[t], "Client") then
+        addRadioCommand(units[t])
+      --end
     end
 
     return time + 5
