@@ -1,7 +1,6 @@
 do
     trigger.action.outText("Booting Spawner Script", 1)
 
-    local spawnerUnits = mist.makeUnitTable({'[blue][plane]', '[blue][helicopter]'})
     local groupCounter = 0
 
     function spawnPlane()
@@ -88,44 +87,36 @@ do
     end
 
     -- Radio Commands
-    SpawnerRadioCommandTable = {}
-
-    function addSpawnerRadioCommand(unitName)
-        local unit = Unit.getByName(unitName)
-        if unit == nil then
-            return
-        end
-
+    function addSpawnerRadioCommand(unit)
         local group = unit:getGroup()
         if group == nil then
             return
         end
 
         local gid = group:getID()
-        local radioName = tostring(gid) .. ":" .. unitName
-        if SpawnerRadioCommandTable[radioName] == nil then
-            trigger.action.outText("Adding radio to " .. radioName, 1)
+        trigger.action.outText("Spawner: Adding radio to " .. unit:getName(), 1)
 
-            local subMenu = missionCommands.addSubMenuForGroup(gid, "Spawner", nil)
-            missionCommands.addCommandForGroup(gid, "Spawn", subMenu, spawnPlane)
-
-            SpawnerRadioCommandTable[radioName] = true
-        end
+        local subMenu = missionCommands.addSubMenuForGroup(gid, "Spawner", nil)
+        missionCommands.addCommandForGroup(gid, "Spawn", subMenu, spawnPlane)
     end
 
-    function addSpawnerRadioCommands(arg, time)
-    -- Use S_EVENT_TOOK_CONTROL instead to add radio commands
-        for t = 1, #spawnerUnits do
-            --if string.find(spawnerUnits[t], "Client") then
-                addSpawnerRadioCommand(spawnerUnits[t])
-            --end
+    function eventHandler(event)
+        if event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
+            if event.initiator == nil then
+                return
+            end
+
+            local initiatorName = event.initiator:getName()
+            addSpawnerRadioCommand(Unit.getByName(initiatorName))
         end
-
-        return time + 5
     end
+    mist.addEventHandler(eventHandler)
 
-    do
-        timer.scheduleFunction(addSpawnerRadioCommands, nil, timer.getTime() + 5)
+    for k, v in pairs(mist.DBs.humansByName) do
+        local unit = Unit.getByName(k)
+        if unit and unit.isActive then
+            addSpawnerRadioCommand(unit)
+        end
     end
 
 end
